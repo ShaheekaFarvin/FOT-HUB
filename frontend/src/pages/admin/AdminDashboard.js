@@ -5,7 +5,7 @@ import { adminStats } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import {
   Users, Vote, Megaphone, MessageSquare, Search,
-  TrendingUp, AlertCircle, ChevronRight,
+  AlertCircle, ChevronRight,
   Activity, Clock, Shield as ShieldIcon, BadgeCheck as BadgeCheckIcon,
   Zap, Heart, MoreHorizontal, LayoutDashboard as LayoutDashboardIcon,
   FlaskConical, Cpu
@@ -29,24 +29,6 @@ function timeAgo(date) {
   if (diff < 604800)  return `${Math.floor(diff / 86400)}d ago`;
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
-
-/* ── Stat Card ── */
-const StatCard = ({ icon, label, value, sub, gradient, delay }) => (
-  <div className="card p-5 animate-fade-up hover:-translate-y-1 transition-all duration-300 overflow-hidden relative group"
-    style={{ animationDelay:`${delay}ms`, opacity:0 }}>
-    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${gradient}`} style={{opacity:'0.03'}}/>
-    <div className="relative z-10 flex items-center gap-4">
-      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg text-white flex-shrink-0`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-2xl font-black text-primary">{value ?? <span className="text-muted">—</span>}</p>
-        <p className="text-sm font-bold text-secondary">{label}</p>
-        {sub && <p className="text-xs text-muted mt-0.5">{sub}</p>}
-      </div>
-    </div>
-  </div>
-);
 
 /* ── Activity Item ── */
 const ActivityItem = ({ item, index, onClick }) => {
@@ -92,8 +74,6 @@ const ActivityItem = ({ item, index, onClick }) => {
 };
 
 /* ── Main Dashboard ── */
-const ADMIN_HERO_BG = 'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1400&h=500&q=90';
-
 const AdminDashboard = () => {
   const { user }                = useAuth();
   const [data, setData]         = useState(null);
@@ -101,29 +81,21 @@ const AdminDashboard = () => {
   const [selected, setSelected] = useState(null);
   const navigate                = useNavigate();
 
-  const isLimitedStaff = user?.adminType === 'hostel_warden' || user?.adminType === 'librarian';
+  // hostel_warden / librarian / union_member get a scoped-down dashboard —
+  // just Recent Complaints + Admin Activity (announcements/complaints only).
+  const isLimitedStaff = ['hostel_warden', 'librarian', 'union_member'].includes(user?.adminType);
 
   useEffect(() => {
-    if (isLimitedStaff) { navigate('/admin/announcements', { replace: true }); return; }
     adminStats().then(r => { setData(r.data); setLoading(false); }).catch(() => setLoading(false));
-  }, [isLimitedStaff]);
-
-  if (isLimitedStaff) return null;
-
-  const s = data?.stats;
-
-  const cards = [
-    { icon:<Users size={24}/>,         label:'Total Students',  value:s?.totalUsers,        sub:`Registered accounts`,            gradient:'from-blue-500 to-blue-600',      delay:0   },
-    { icon:<Vote size={24}/>,          label:'Elections',       value:s?.totalElections,     sub:`${s?.ongoingElections??0} ongoing`,   gradient:'from-indigo-500 to-indigo-600',  delay:80  },
-    { icon:<MessageSquare size={24}/>, label:'Complaints',      value:s?.totalComplaints,    sub:`${s?.pendingComplaints??0} pending`,  gradient:'from-amber-500 to-amber-600',    delay:160 },
-    { icon:<Search size={24}/>,        label:'Lost & Found',    value:s?.totalLostFound,     sub:`${s?.activeItems??0} active`,        gradient:'from-emerald-500 to-emerald-600',delay:240 },
-    { icon:<Megaphone size={24}/>,     label:'Announcements',   value:s?.totalAnnouncements, sub:'Posted notices',                     gradient:'from-rose-500 to-rose-600',      delay:320 },
-  ];
+  }, []);
 
   const statusColors = { pending:'badge-pending', 'in-progress':'badge-progress', resolved:'badge-resolved', rejected:'badge-rejected' };
 
   return (
-    <AdminLayout title="Dashboard Overview" subtitle="Faculty of Technology — Rajarata University">
+    <AdminLayout
+      title="Dashboard Overview"
+      subtitle={isLimitedStaff ? 'Announcements & Complaints overview' : 'Faculty of Technology — Rajarata University'}
+    >
 
       {/* Students by Department */}
       {!loading && data?.deptStats && (
@@ -161,35 +133,37 @@ const AdminDashboard = () => {
       )}
 
       {/* Bottom section: tables + activity feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${isLimitedStaff ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
 
-        {/* Recent Users */}
-        <div className="card p-5 animate-fade-up" style={{animationDelay:'200ms',opacity:0}}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-primary" style={{fontFamily:'Playfair Display,serif'}}>Recent Registrations</h3>
-            <button onClick={() => navigate('/admin/users')} className="text-xs text-primary font-bold hover:text-[#c9a84c] transition-colors flex items-center gap-1">
-              View All <ChevronRight size={13}/>
-            </button>
-          </div>
-          {!data?.recentUsers?.length ? (
-            <p className="text-muted text-sm text-center py-8">No users yet</p>
-          ) : (
-            <div className="space-y-2">
-              {data.recentUsers.map(u => (
-                <div key={u._id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--bg-card-hover)] transition group">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0d1b2a] to-[#243b6a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {u.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-primary truncate">{u.name}</p>
-                    <p className="text-xs text-muted">{u.studentId} · {u.department}</p>
-                  </div>
-                  <span className="text-xs text-muted">{new Date(u.createdAt).toLocaleDateString()}</span>
-                </div>
-              ))}
+        {/* Recent Users — super_admin only */}
+        {!isLimitedStaff && (
+          <div className="card p-5 animate-fade-up" style={{animationDelay:'200ms',opacity:0}}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-primary" style={{fontFamily:'Playfair Display,serif'}}>Recent Registrations</h3>
+              <button onClick={() => navigate('/admin/users')} className="text-xs text-primary font-bold hover:text-[#c9a84c] transition-colors flex items-center gap-1">
+                View All <ChevronRight size={13}/>
+              </button>
             </div>
-          )}
-        </div>
+            {!data?.recentUsers?.length ? (
+              <p className="text-muted text-sm text-center py-8">No users yet</p>
+            ) : (
+              <div className="space-y-2">
+                {data.recentUsers.map(u => (
+                  <div key={u._id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--bg-card-hover)] transition group">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0d1b2a] to-[#243b6a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {u.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-primary truncate">{u.name}</p>
+                      <p className="text-xs text-muted">{u.studentId} · {u.department}</p>
+                    </div>
+                    <span className="text-xs text-muted">{new Date(u.createdAt).toLocaleDateString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Recent Complaints */}
         <div className="card p-5 animate-fade-up" style={{animationDelay:'300ms',opacity:0}}>
@@ -227,9 +201,11 @@ const AdminDashboard = () => {
             </div>
             <div className="flex items-center justify-between flex-1">
               <h3 className="font-bold text-primary" style={{fontFamily:'Playfair Display,serif'}}>Admin Activity</h3>
-              <button onClick={() => navigate('/admin/activity')} className="text-xs text-primary font-bold hover:text-[#c9a84c] transition-colors flex items-center gap-1">
-                View All <ChevronRight size={13}/>
-              </button>
+              {!isLimitedStaff && (
+                <button onClick={() => navigate('/admin/activity')} className="text-xs text-primary font-bold hover:text-[#c9a84c] transition-colors flex items-center gap-1">
+                  View All <ChevronRight size={13}/>
+                </button>
+              )}
             </div>
           </div>
 

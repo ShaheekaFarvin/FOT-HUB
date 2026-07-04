@@ -7,6 +7,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import NotificationPopup from './components/NotificationPopup';
+import { useAuth } from './context/AuthContext';
 
 import Login          from './pages/student/Login';
 import Register       from './pages/student/Register';
@@ -31,6 +32,14 @@ import AdminActivity      from './pages/admin/AdminActivity';
 import AdminProfile       from './pages/admin/AdminProfile';
 import RegistrationConfig from './pages/admin/RegistrationConfig';
 
+// Sends the user to the right home page: admins land on the admin
+// dashboard, students land on the student dashboard.
+const RoleHome = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+};
+
 function App() {
   return (
     <ThemeProvider>
@@ -46,8 +55,8 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword/>}/>
 
               <Route path="/dashboard"      element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
-              <Route path="/elections"      element={<ProtectedRoute><Elections/></ProtectedRoute>}/>
-              <Route path="/elections/:id"  element={<ProtectedRoute><VotingPage/></ProtectedRoute>}/>
+              <Route path="/elections"      element={<ProtectedRoute blockLimitedStaff><Elections/></ProtectedRoute>}/>
+              <Route path="/elections/:id"  element={<ProtectedRoute blockLimitedStaff><VotingPage/></ProtectedRoute>}/>
               <Route path="/my-votes"       element={<ProtectedRoute><MyVotes/></ProtectedRoute>}/>
               <Route path="/announcements"  element={<ProtectedRoute><Announcements/></ProtectedRoute>}/>
               <Route path="/complaints"     element={<ProtectedRoute><Complaints/></ProtectedRoute>}/>
@@ -65,8 +74,8 @@ function App() {
               <Route path="/admin/reg-settings"  element={<ProtectedRoute adminOnly><RegistrationConfig/></ProtectedRoute>}/>
               <Route path="/admin/profile"       element={<ProtectedRoute adminOnly><AdminProfile/></ProtectedRoute>}/>
 
-              <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
-              <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
+              <Route path="/" element={<RoleHome/>}/>
+              <Route path="*" element={<RoleHome/>}/>
             </Routes>
           </Router>
         </ElectionProvider>

@@ -6,19 +6,25 @@ const {
   canManageAnnouncements,
   canManageComplaints,
   fullAccessOnly,
+  canViewDashboard,
 } = require('../middleware/role');
 const upload = require('../middleware/upload');
 const ctrl   = require('../controllers/adminController');
 
 router.use(protect, adminOnly);
 
-// ── Dashboard & Users → super_admin & union_member only ──
-router.get('/stats',              fullAccessOnly, ctrl.getDashboardStats);
+// ── Dashboard → all admin types (super_admin gets full stats, limited
+//    staff get a scoped-down view — handled inside the controller) ──
+router.get('/stats',              canViewDashboard, ctrl.getDashboardStats);
+
+// ── Users → super_admin only ──
 router.get('/users',              fullAccessOnly, ctrl.getAllUsers);
 router.put('/users/:id/role',     fullAccessOnly, ctrl.updateUserRole);
+router.put('/users/:id/block',    fullAccessOnly, ctrl.blockUser);
+router.put('/users/:id/unblock',  fullAccessOnly, ctrl.unblockUser);
 router.delete('/users/:id',       fullAccessOnly, ctrl.deleteUser);
 
-// ── Elections → super_admin & union_member ──
+// ── Elections → super_admin only ──
 router.post('/elections',           canManageElections, ctrl.createElection);
 router.put('/elections/:id',        canManageElections, ctrl.updateElection);
 router.delete('/elections/:id',     canManageElections, ctrl.deleteElection);
@@ -37,7 +43,7 @@ router.get('/complaints',            canManageComplaints, ctrl.getAllComplaints)
 router.put('/complaints/:id/status', canManageComplaints, ctrl.updateComplaintStatus);
 router.post('/complaints/:id/reply', canManageComplaints, ctrl.replyToComplaint);
 
-// ── Activity & Lost+Found → super_admin & union_member only ──
+// ── Activity & Lost+Found → super_admin only ──
 router.get('/activity',              fullAccessOnly, ctrl.getActivityLog);
 router.get('/lost-found',            fullAccessOnly, ctrl.getAllLostFound);
 router.put('/lost-found/:id/status', fullAccessOnly, ctrl.updateLostFoundStatus);

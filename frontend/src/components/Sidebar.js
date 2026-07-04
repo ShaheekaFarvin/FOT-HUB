@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNotifications } from '../context/NotificationContext';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import BrandMark from './BrandMark';
 
 const BASE_URL = 'http://localhost:5000';
 import {
@@ -17,14 +18,19 @@ const Sidebar = () => {
   const [open, setOpen] = useState(false);
 
 
+  // hostel_warden / librarian / union_member admins previewing the student
+  // portal don't get to see the Elections section at all.
+  const isLimitedStaffAdmin = user?.role === 'admin' &&
+    ['hostel_warden', 'librarian', 'union_member'].includes(user?.adminType);
+
   const navItems = [
     { to: '/dashboard',     icon: <LayoutDashboard size={17}/>, label: 'Dashboard' },
-    { to: '/elections',     icon: <Vote size={17}/>,            label: 'Elections' },
+    { to: '/elections',     icon: <Vote size={17}/>,            label: 'Elections',      show: !isLimitedStaffAdmin },
     { to: '/announcements', icon: <Megaphone size={17}/>,       label: 'Announcements' },
     { to: '/complaints',    icon: <MessageSquare size={17}/>,   label: 'Complaints' },
     { to: '/lost-found',    icon: <Search size={17}/>,          label: 'Lost & Found' },
     { to: '/notifications', icon: <Bell size={17}/>,            label: 'Notifications' },
-  ];
+  ].filter(item => item.show !== false);
 
   const SidebarInner = () => (
     <div className="flex flex-col h-full overflow-hidden">
@@ -32,10 +38,7 @@ const Sidebar = () => {
       {/* Brand */}
       <div className="px-5 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #c9a84c, #e8c96a)' }}>
-            <span className="font-black text-xs leading-none text-center" style={{ color: '#0d1b2a' }}>FOT<br/>RJT</span>
-          </div>
+          <BrandMark size={44} shadow="shadow-lg" />
           <div>
             <p className="font-bold text-sm text-white leading-tight" style={{ fontFamily: 'Playfair Display, serif' }}>FOT Student Hub</p>
             <p className="text-xs font-medium mt-0.5" style={{ color: 'rgba(201,168,76,0.75)' }}>Rajarata University</p>
@@ -138,10 +141,7 @@ const Sidebar = () => {
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 z-30 flex items-center justify-between px-4 shadow-lg"
         style={{ background: '#0d1b2a' }}>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #c9a84c, #e8c96a)' }}>
-            <span className="font-black text-xs" style={{ color: '#0d1b2a' }}>FOT</span>
-          </div>
+          <BrandMark size={32} radius="rounded-lg" />
           <span className="text-white font-bold text-sm" style={{ fontFamily: 'Playfair Display, serif' }}>Student Hub</span>
         </div>
         <button onClick={() => setOpen(!open)} className="text-white p-1.5 rounded-lg transition"

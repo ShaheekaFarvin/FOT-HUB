@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import BrandMark from '../../components/BrandMark';
 import { Eye, EyeOff, Loader2, AlertCircle, Shield, Sun, Moon, GraduationCap, Lock, ArrowRight, ShieldCheck, BadgeCheck, UserCheck, Briefcase, Megaphone, ClipboardList, Search } from 'lucide-react';
 
 const SLIDES = [
@@ -22,7 +23,10 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try { await login(email, password); navigate('/dashboard'); } catch {}
+    try {
+      const data = await login(email, password);
+      navigate(data.role === 'admin' ? '/admin' : '/dashboard');
+    } catch {}
   };
 
   const handleImgError = () => {
@@ -153,10 +157,7 @@ const Login = () => {
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border-card)', boxShadow: '0 24px 60px rgba(13,27,42,0.14), 0 4px 16px rgba(13,27,42,0.06)' }}>
 
           <div className="lg:hidden flex items-center gap-3 mb-4 justify-center">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
-              style={{ background: 'linear-gradient(135deg, #0d1b2a, #1a2b4a)' }}>
-              <span className="font-black text-xs" style={{ color: 'var(--gold)' }}>FOT</span>
-            </div>
+            <BrandMark size={40} shadow="shadow-md" variant="navy" />
             <div>
               <p className="font-bold text-base" style={{ fontFamily: 'Playfair Display, serif', color: 'var(--text-primary)' }}>Student Hub</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Rajarata University</p>

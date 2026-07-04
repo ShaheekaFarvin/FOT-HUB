@@ -210,6 +210,22 @@ exports.loginUser = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (user && await user.matchPassword(password)) {
+
+      // ── Temporary block check ──
+      if (user.blockedUntil) {
+        if (user.blockedUntil > new Date()) {
+          const until = user.blockedUntil.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          return res.status(403).json({
+            message: `Your account has been blocked by admin until ${until}. Reason: ${user.blockReason || 'Not specified'}`,
+          });
+        }
+        // Block period has expired — auto-clear it and let them log in.
+        user.isActive     = true;
+        user.blockedUntil = null;
+        user.blockReason  = '';
+        await user.save();
+      }
+
       return res.json(formatUser(user, generateToken(user._id)));
     }
     res.status(401).json({ message: 'Invalid email or password' });

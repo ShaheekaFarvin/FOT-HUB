@@ -67,6 +67,8 @@ export const getAnnouncements  = ()  => API.get('/student/announcements');
 export const adminStats            = ()     => API.get('/admin/stats');
 export const adminGetUsers         = ()     => API.get('/admin/users');
 export const adminUpdateRole       = (id,d) => API.put(`/admin/users/${id}/role`, d);
+export const adminBlockUser        = (id,d) => API.put(`/admin/users/${id}/block`, d);
+export const adminUnblockUser      = (id)   => API.put(`/admin/users/${id}/unblock`);
 export const adminDeleteUser       = (id)   => API.delete(`/admin/users/${id}`);
 export const adminCreateElection   = (d)    => API.post('/admin/elections', d);
 export const adminUpdateElection   = (id,d) => API.put(`/admin/elections/${id}`, d);

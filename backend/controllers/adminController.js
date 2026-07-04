@@ -13,6 +13,27 @@ const log = (adminId, action, category, detail = '', icon = 'activity') =>
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 exports.getDashboardStats = async (req, res) => {
   try {
+    const isFullAccess = req.user?.adminType === 'super_admin';
+
+    // ── Limited staff (hostel_warden / librarian / union_member) get a
+    //    scoped-down dashboard: only complaint + announcement related data.
+    //    No user registrations, no department stats, no full stat cards.
+    if (!isFullAccess) {
+      const recentComplaints = await Complaint.find().sort({ createdAt: -1 }).limit(5).populate('submittedBy', 'name studentId department');
+      const recentActivity   = await ActivityLog.find({ category: { $in: ['complaint', 'announcement'] } })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .populate('admin', 'name');
+
+      return res.json({
+        stats: null,
+        deptStats: null,
+        recentUsers: [],
+        recentComplaints,
+        recentActivity,
+      });
+    }
+
     const [totalUsers, totalElections, totalComplaints, totalLostFound, totalAnnouncements] = await Promise.all([
       User.countDocuments({ role: 'student' }),
       Election.countDocuments(),
@@ -66,6 +87,42 @@ exports.deleteUser = async (req, res) => {
     await User.findByIdAndDelete(req.params.id);
     log(req.user._id, 'Deleted user', 'user', u?.name || req.params.id, 'user');
     res.json({ message: 'User deleted' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// Temporarily block a user's login for N days, with a reason.
+exports.blockUser = async (req, res) => {
+  try {
+    const { days, reason } = req.body;
+    const numDays = parseInt(days, 10);
+    if (!numDays || numDays < 1) return res.status(400).json({ message: 'Please provide a valid number of days.' });
+    if (!reason || !reason.trim()) return res.status(400).json({ message: 'A reason is required to block a user.' });
+
+    const blockedUntil = new Date(Date.now() + numDays * 24 * 60 * 60 * 1000);
+    const u = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: false, blockedUntil, blockReason: reason.trim() },
+      { new: true }
+    ).select('-password');
+    if (!u) return res.status(404).json({ message: 'User not found' });
+
+    log(req.user._id, `Blocked account for ${numDays} day(s)`, 'user', `${u.name} — ${reason.trim()}`, 'user');
+    res.json(u);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+// Manually lift a block before it expires.
+exports.unblockUser = async (req, res) => {
+  try {
+    const u = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true, blockedUntil: null, blockReason: '' },
+      { new: true }
+    ).select('-password');
+    if (!u) return res.status(404).json({ message: 'User not found' });
+
+    log(req.user._id, 'Unblocked account', 'user', u.name, 'user');
+    res.json(u);
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 

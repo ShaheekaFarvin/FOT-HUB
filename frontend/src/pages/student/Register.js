@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import BrandMark from '../../components/BrandMark';
 import {
   AlertCircle, Loader2, CheckCircle2, GraduationCap, Shield,
   ChevronRight, Eye, EyeOff, Home, Users, Crown, ChevronLeft,
@@ -403,8 +404,8 @@ const Register = () => {
 
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0d1b2a] to-[#243b6a] flex items-center justify-center mx-auto mb-4 shadow-xl">
-            <span className="text-[#c9a84c] font-black text-xs text-center leading-tight">FOT<br />RJT</span>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+            <BrandMark size={56} radius="rounded-2xl" variant="navy" />
           </div>
           <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: 'Playfair Display,serif' }}>
             Create Account

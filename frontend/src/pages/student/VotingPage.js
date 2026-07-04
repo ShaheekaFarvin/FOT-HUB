@@ -366,7 +366,7 @@ const VotingPage = () => {
               className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition flex items-center justify-center gap-2 disabled:opacity-60">
               {submitting
                 ? <><Loader2 size={15} className="animate-spin"/> Submitting...</>
-                : <><Lock size={15}/> Confirm & Submit</>}
+                : <>Confirm & Submit</>}
             </button>
           </div>
         </div>

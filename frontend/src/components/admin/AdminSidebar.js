@@ -29,7 +29,7 @@ const AdminSidebar = () => {
   const isLimitedStaff = adminType === 'hostel_warden' || adminType === 'librarian' || adminType === 'union_member';
 
   const allNavItems = [
-    { to: '/admin',               icon: <LayoutDashboard size={17}/>, label: 'Dashboard',     end: true, show: isFullAccess },
+    { to: '/admin',               icon: <LayoutDashboard size={17}/>, label: 'Dashboard',     end: true, show: isFullAccess || isLimitedStaff },
     { to: '/admin/elections',     icon: <Vote size={17}/>,            label: 'Elections',              show: isFullAccess },
     { to: '/admin/announcements', icon: <Megaphone size={17}/>,       label: 'Announcements',          show: isFullAccess || isLimitedStaff },
     { to: '/admin/complaints',    icon: <MessageSquare size={17}/>,   label: 'Complaints',             show: isFullAccess || isLimitedStaff },

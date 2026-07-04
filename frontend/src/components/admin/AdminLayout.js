@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AdminSidebar from './AdminSidebar';
-import { LayoutDashboard, LogOut, Search, Plus, Bell } from 'lucide-react';
+import { LogOut, Search, GraduationCap, Bell, Users, Megaphone, MessageSquare, Vote, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import {
+  adminGetUsers, adminGetAnnouncements, adminGetComplaints,
+  adminGetLostFound, getElections,
+} from '../../services/api';
 
 const BASE_URL = 'http://localhost:5000';
 
@@ -14,6 +18,77 @@ const AdminLayout = ({ children, title, subtitle }) => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleLogout = () => { logout(); navigate('/login'); };
+
+  const isFullAccess   = !user?.adminType || user?.adminType === 'super_admin';
+
+  /* ── Global search ─────────────────────────────────────────────── */
+  const [query, setQuery]     = useState('');
+  const [open, setOpen]       = useState(false);
+  const [searchData, setSearchData] = useState(null); // lazily-loaded lists to search over
+  const searchBoxRef = useRef(null);
+
+  // Load searchable data once, scoped to what this admin type can see.
+  useEffect(() => {
+    const loaders = [
+      adminGetAnnouncements().then(r => ({ announcements: r.data })).catch(() => ({ announcements: [] })),
+      adminGetComplaints().then(r => ({ complaints: r.data })).catch(() => ({ complaints: [] })),
+    ];
+    if (isFullAccess) {
+      loaders.push(
+        adminGetUsers().then(r => ({ users: r.data })).catch(() => ({ users: [] })),
+        getElections().then(r => ({ elections: r.data })).catch(() => ({ elections: [] })),
+        adminGetLostFound().then(r => ({ lostFound: r.data })).catch(() => ({ lostFound: [] })),
+      );
+    }
+    Promise.all(loaders).then(parts => {
+      setSearchData(Object.assign({ announcements: [], complaints: [], users: [], elections: [], lostFound: [] }, ...parts));
+    });
+  }, [isFullAccess]);
+
+  // Close the dropdown on outside click.
+  useEffect(() => {
+    const onClick = (e) => { if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  const buildResults = useCallback(() => {
+    if (!searchData || !query.trim()) return [];
+    const q = query.trim().toLowerCase();
+    const groups = [];
+
+    const usersMatch = (searchData.users || [])
+      .filter(u => `${u.name} ${u.email} ${u.registrationNumber || ''}`.toLowerCase().includes(q)).slice(0, 4)
+      .map(u => ({ id: u._id, icon: Users, label: u.name, sub: u.email, route: '/admin/users' }));
+    if (usersMatch.length) groups.push({ label: 'Users', items: usersMatch });
+
+    const annMatch = (searchData.announcements || [])
+      .filter(a => `${a.title} ${a.content || ''}`.toLowerCase().includes(q)).slice(0, 4)
+      .map(a => ({ id: a._id, icon: Megaphone, label: a.title, sub: a.category || 'Announcement', route: '/admin/announcements' }));
+    if (annMatch.length) groups.push({ label: 'Announcements', items: annMatch });
+
+    const compMatch = (searchData.complaints || [])
+      .filter(c => `${c.title} ${c.category || ''} ${c.submittedBy?.name || ''}`.toLowerCase().includes(q)).slice(0, 4)
+      .map(c => ({ id: c._id, icon: MessageSquare, label: c.title, sub: c.submittedBy?.name || 'Complaint', route: '/admin/complaints' }));
+    if (compMatch.length) groups.push({ label: 'Complaints', items: compMatch });
+
+    const elecMatch = (searchData.elections || [])
+      .filter(e => `${e.title}`.toLowerCase().includes(q)).slice(0, 4)
+      .map(e => ({ id: e._id, icon: Vote, label: e.title, sub: e.status || 'Election', route: '/admin/elections' }));
+    if (elecMatch.length) groups.push({ label: 'Elections', items: elecMatch });
+
+    const lfMatch = (searchData.lostFound || [])
+      .filter(l => `${l.title} ${l.description || ''}`.toLowerCase().includes(q)).slice(0, 4)
+      .map(l => ({ id: l._id, icon: MapPin, label: l.title, sub: l.type === 'found' ? 'Found item' : 'Lost item', route: '/admin/lost-found' }));
+    if (lfMatch.length) groups.push({ label: 'Lost & Found', items: lfMatch });
+
+    return groups;
+  }, [searchData, query]);
+
+  const resultGroups = buildResults();
+  const hasResults   = resultGroups.length > 0;
+
+  const goTo = (route) => { setOpen(false); setQuery(''); navigate(route); };
 
   return (
     <div className="flex min-h-screen page-bg">
@@ -27,15 +102,46 @@ const AdminLayout = ({ children, title, subtitle }) => {
           </div>
 
           {/* Search bar */}
-          <div className="hidden md:flex flex-1 max-w-xs relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}/>
+          <div className="hidden md:flex flex-1 max-w-xs relative" ref={searchBoxRef}>
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10" style={{ color: 'var(--text-muted)' }}/>
             <input
               type="text" placeholder="Search anything..."
+              value={query}
+              onChange={e => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => query && setOpen(true)}
               className="w-full pl-9 pr-12 py-2 rounded-xl text-sm outline-none transition-all duration-200"
               style={{ background: 'var(--bg-muted)', border: '1px solid var(--border-card)', color: 'var(--text-primary)' }}
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold px-1.5 py-0.5 rounded"
-              style={{ background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border-card)' }}>⌘K</span>
+            {!query && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border-card)' }}>⌘K</span>
+            )}
+
+            {/* Results dropdown */}
+            {open && query.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden z-30 max-h-96 overflow-y-auto"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border-card)', boxShadow: '0 12px 32px rgba(0,0,0,0.25)' }}>
+                {!hasResults ? (
+                  <p className="text-sm text-muted text-center py-6">No results for "{query}"</p>
+                ) : (
+                  resultGroups.map(group => (
+                    <div key={group.label} className="py-1.5">
+                      <p className="px-4 pt-1 pb-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{group.label}</p>
+                      {group.items.map(item => (
+                        <button key={item.id} onClick={() => goTo(item.route)}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-[var(--bg-card-hover)] transition">
+                          <item.icon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-primary truncate">{item.label}</p>
+                            <p className="text-xs text-muted truncate">{item.sub}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -43,7 +149,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
               onClick={() => navigate('/dashboard')}
               className="hidden sm:flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-xl font-semibold transition-all duration-200 hover:opacity-90 active:scale-95"
               style={{ background: '#0d1b2a', color: '#fff', boxShadow: '0 1px 6px rgba(13,27,42,0.25)' }}>
-              <Plus size={13} /> Service Portal
+              <GraduationCap size={13} /> Student Portal
             </button>
 
             {/* Alerts bell */}

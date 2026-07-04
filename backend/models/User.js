@@ -9,6 +9,10 @@ const bcrypt   = require('bcryptjs');
   'librarian'      → announcements + complaints ONLY (nothing else)
   'union_member'   → announcements + complaints ONLY (nothing else) — same as warden/librarian
   'student' role   → adminType is null
+
+  Note: NO admin type (including super_admin) can cast a vote — voting is
+  restricted to students only (see middleware/auth.js studentOnly + routes/elections.js).
+  Only super_admin can access/manage the Elections module in the admin panel.
   ─────────────────────────────────────────────────────────────────
 */
 
@@ -26,6 +30,10 @@ const userSchema = new mongoose.Schema({
   role:       { type: String, enum: ['student', 'admin'], default: 'student' },
   avatar:     { type: String, default: '' },
   isActive:   { type: Boolean, default: true },
+
+  // ── Temporary block (super_admin can suspend an account for N days) ──
+  blockedUntil: { type: Date,   default: null },
+  blockReason:  { type: String, default: '' },
 
   // ── Student-only fields ────────────────────────────────────────
   // registrationNumber: unique per student (e.g. ICT/2022/001)
@@ -79,7 +87,7 @@ const userSchema = new mongoose.Schema({
 // ── Permission helpers ─────────────────────────────────────────────
 userSchema.virtual('canAccessElections').get(function () {
   if (this.role === 'student') return true; // students vote
-  return ['super_admin', 'union_member'].includes(this.adminType);
+  return this.adminType === 'super_admin'; // only super_admin can view/manage elections
 });
 userSchema.virtual('canAccessAnnouncements').get(function () {
   if (this.role === 'student') return true;
