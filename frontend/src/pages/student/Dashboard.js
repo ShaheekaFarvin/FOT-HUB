@@ -598,7 +598,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
             { icon: Users,  value: '1,200+', label: 'Registered Students' },
-            { icon: Award,  value: '4',      label: 'Departments'         },
+            { icon: Award,  value: '5',      label: 'Departments'         },
             { icon: Globe,  value: '100%',   label: 'Secure & Encrypted'  },
           ].map(({ icon: Icon, value, label }, i) => (
             <div key={i} className="p-4 rounded-2xl text-center"
